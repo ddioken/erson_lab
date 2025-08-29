@@ -1,4 +1,4 @@
-# TES Overlap Tool (Transcript 3′ End Matcher)
+# TES Overlap Tool (Transcript 3′End Matcher)
 
 This Python tool compares **transcript ends (TES)** between two transcript lists and reports overlaps within a user-defined tolerance (default ±100 bp).  
 It is designed for situations where you want to know if transcript annotations or experimental results agree at the level of transcript end positions.
