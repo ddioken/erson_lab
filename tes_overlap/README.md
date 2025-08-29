@@ -56,7 +56,7 @@ B4,chr3,+,30000,30500
 
 ---
 
-##Quick Usage
+## Quick Usage
 
 - On .csv input
 
@@ -73,7 +73,7 @@ python3 tes_overlap_trxlists.py A.xlsx B.xlsx -t 100 -o tes_overlap_results.xlsx
 
 ---
 
-#Output
+## Output
 
 - Prints a summary
 
