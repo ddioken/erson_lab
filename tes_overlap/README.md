@@ -1,130 +1,137 @@
-# TES Overlap Tool (Transcript 3′ End Matcher)
+# Erson Lab Tools: BAM Interval Coverage Checker
 
-This Python tool compares **transcript ends (TES)** between two transcript lists and reports overlaps within a user-defined tolerance (default ±100 bp).  
-It is designed for situations where you want to know if transcript annotations or experimental results agree at the level of transcript end positions.
+A simple Bash tool to quickly evaluate read coverage in BAM files across a user-defined genomic interval.  
 
----
+Originally developed for **single-cell RNA-seq analysis**, this script can be used to check:
 
-## 🔍 Why is this useful?
+- Coverage of **intronic regions** (e.g., retained introns, splicing QC)
+- Reads **outside annotated gene boundaries** (novel isoforms, antisense transcription)
+- **Per-cell BAM QC** before deeper pipelines
+- General BAM QC in bulk RNA-seq or other sequencing data
 
-- **Alternative Polyadenylation (APA)** studies: detect matching or shifted transcript ends across conditions.
-- **Validation:** compare reference annotations with long-read sequencing outputs (e.g., Nanopore, 3′-seq).
-- **QC:** identify unexpected transcript end positions in experimental data.
-- **Cross-dataset comparison:** check consistency of transcript boundaries between different sources.
-
----
-
-## 📂 Input format
-
-You can supply **CSV** or **Excel (.xlsx)** files with the following columns:
-
-- `transcript` – transcript ID or name  
-- `chrom` – chromosome (e.g., `chr1`, `chr2`)  
-- `strand` – `+` or `-`  
-- `start` – transcript genomic start coordinate  
-- `end` – transcript genomic end coordinate  
-
-The tool automatically computes TES:
-
-- If `strand == '+'`, TES = `end`  
-- If `strand == '-'`, TES = `start`  
+This tool is lightweight, uses only `samtools` + `awk`, and is ideal for **fast, exploratory checks** of BAMs before heavier pipelines.
 
 ---
 
-## 🧪 Minimal Examples
-
-We provide two minimal test files (`A.csv`, `B.csv` and `A.xlsx`, `B.xlsx`) inside this folder.
-
-### Example A.csv
-
-```csv
-transcript,chrom,strand,start,end
-A1,chr1,+,1000,2000
-A2,chr1,-,5000,5500
-A3,chr2,+,10000,10100
-A4,chr3,+,20000,20500
-```
-### Example B.csv
-
-```csv
-transcript,chrom,strand,start,end
-B1,chr1,+,1100,2090
-B2,chr1,-,5080,5600
-B3,chr2,+,10050,10120
-B4,chr3,+,30000,30500
-```
+## ✨ Features
+- Works with any BAM files (bulk or single-cell)
+- Takes **four arguments** (input dir, output dir, threshold %, region)
+- Outputs a CSV summary of coverage per sample
+- Can be run on hundreds of BAMs with just one command
+- Useful for **QC**, **targeted exploration**, or **filtering single cells**
 
 ---
 
-##Quick Usage
+## 🔧 Requirements
+- [samtools](http://www.htslib.org/) ≥ 1.10  
+- bash ≥ 4  
 
-- On .csv input
+Install samtools:
 
 ```bash
-cd tes_overlap
-python3 tes_overlap_trxlists.py A.csv B.csv -t 100 -o tes_overlap_results.xlsx
+# macOS
+brew install samtools
+
+# Ubuntu/Debian Linux
+sudo apt-get install samtools
 ```
 
-- On .xlsx input
-```bash
-cd tes_overlap
-python3 tes_overlap_trxlists.py A.xlsx B.xlsx -t 100 -o tes_overlap_results.xlsx
-```
 
 ---
 
-#Output
-
-- Prints a summary
-
-```Arduino
-File A has 3 transcripts whose TES overlaps (±100 bp) with File B.
-File B has 3 transcripts whose TES overlaps (±100 bp) with File A.
-```
-
-Produces an Excel file with 3 sheets:
-
-- A_with_match_in_B → File A + column TES_found_in_B
-
-- B_with_match_in_A → File B + column TES_found_in_A
-
-- summary → counts and tolerance used
-
----
-
-##Requirements
-
-- Python ≥ 3.8
-
-- pandas
-
-- numpy
-
-- xlsxwriter (for Excel output)
-Install with
+## Installation
+- Clone this repository and make the script executable:
 
 ```bash
-pip install pandas numpy xlsxwriter
+git clone https://github.com/ddioken/erson_lab.git
+cd erson_lab
+chmod +x bam_interval_threshold.sh
 ```
+
+
 ---
 
-##Expected results on included examples
-
-Using the included A.csv and B.csv:
-
-- A1 TES=2000 matches B1 TES=2090 (distance +90)
-
-- A2 TES=5000 matches B2 TES=5080 (distance +80)
-
-- A3 TES=10100 matches B3 TES=10120 (distance +20)
-
-- A4 TES=20500 has no match
-
-So the summary is:
-
-```Arduino
-File A has 3 transcripts whose TES overlaps (±100 bp) with File B.
-File B has 3 transcripts whose TES overlaps (±100 bp) with File A.
+## Usage
+```bash
+bash bam_interval_threshold.sh <input_dir> <output_dir> <threshold_percentage> <region>
 ```
+
+---
+
+## Arguments
+
+- `<input_dir>` — folder containing BAM files
+
+- `<output_dir>` — folder to save results
+
+- `<threshold_percentage>` — e.g. 80 for ≥80% coverage requirement
+
+- `<region>` — genomic interval in chrom:start-end format (must match BAM contig naming)
+
+---
+
+## Example
+
+- Check whether BAMs in /data/singlecell_bams have ≥80% coverage of an intronic BRCA1 region:
+
+```bash
+bash bam_interval_threshold.sh /data/singlecell_bams /data/output 80 17:43044295-43044497
+```
+
+This will:
+
+- Read all BAMs in /data/singlecell_bams
+
+- Compute coverage across 17:43,044,295–43,044,497
+
+- Write results to /data/output/qualifying_files.csv
+
+---
+
+## Output
+
+The script produces a CSV file at <output_dir>/qualifying_files.csv with columns:
+
+| sample    | total_positions | covered_positions | percent_covered |
+|-----------|-----------------|-------------------|-----------------|
+| cellA.bam | 203             | 198               | 97.5            |
+| cellB.bam | 203             |  75               | 36.9            |
+
+- total_positions = length of the interval (bp)
+
+- covered_positions = number of bases with ≥1 read
+
+- percent_covered = coverage fraction × 100
+
+Only samples passing the threshold are included in the final list.
+
+---
+
+## When to use this tool
+
+- Intronic coverage: Verify if single-cell BAMs capture intronic regions
+
+- Out-of-gene coverage: Detect reads mapping beyond annotated gene boundaries
+
+- Targeted QC: Test specific loci before heavy workflows (STARsolo, CellRanger, etc.)
+
+- Single-cell filtering: Exclude BAMs/cells that fail to capture regions of interest
+
+---
+
+## Notes
+
+- Region naming must match BAM (e.g. 17: vs chr17:).
+
+- BAMs must be indexed (.bai or .csi). The script will create indexes if missing.
+
+- Works on macOS and Linux.
+
+---
+
+## Authors
+
+Developed in **Erson Lab**  
+Maintainer: [Didem Naz Dioken](https://github.com/ddioken)
 
 
