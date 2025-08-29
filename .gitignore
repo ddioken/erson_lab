@@ -1,0 +1,13 @@
+*.bam
+*.bai
+*.csi
+*.cram
+*.crai
+*.sam
+*.vcf
+*.vcf.gz
+*.tbi
+*.idx
+*.csv
+*.txt
+.DS_Store
