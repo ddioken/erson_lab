@@ -11,3 +11,4 @@
 *.csv
 *.txt
 .DS_Store
+~$*.xlsx
